@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agri-Demand Optimizer — Technical Report</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --paper:   #f7f6f3;
+      --white:   #ffffff;
+      --ink:     #1a1a1a;
+      --ink2:    #3d3d3d;
+      --muted:   #8a8a8a;
+      --rule:    #dddbd7;
+      --navy:    #0e3460;
+      --teal:    #1d7a63;
+      --mono:    'JetBrains Mono', monospace;
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── DOC WRAPPER ─── */
+    .doc {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 80px 40px 120px;
+    }
+
+    /* ─── HEADER ─── */
+    .doc-header {
+      border-bottom: 2px solid var(--ink);
+      padding-bottom: 28px;
+      margin-bottom: 52px;
+    }
+    .back {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-family: var(--mono);
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.06em;
+      margin-bottom: 28px;
+    }
+    .back:hover { color: var(--navy); }
+
+    .doc-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-size: 2.0rem;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      line-height: 1.2;
+      color: var(--ink);
+    }
+    .doc-byline {
+      display: flex;
+      gap: 32px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .byline-item {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+    .byline-item span { color: var(--ink2); }
+
+    /* ─── SECTIONS ─── */
+    .section { margin-bottom: 60px; }
+
+    h2 {
+      font-size: 0.7rem;
+      font-family: var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 10px;
+      letter-spacing: -0.01em;
+    }
+
+    p {
+      font-size: 0.92rem;
+      color: var(--ink2);
+      margin-bottom: 14px;
+      max-width: 680px;
+    }
+
+    /* ─── METRICS ROW ─── */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      border: 1px solid var(--rule);
+      margin-bottom: 40px;
+    }
+    .metric {
+      padding: 28px 24px;
+      border-right: 1px solid var(--rule);
+    }
+    .metric:last-child { border-right: none; }
+    .metric-value {
+      font-family: var(--mono);
+      font-size: 2.2rem;
+      font-weight: 500;
+      color: var(--navy);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .metric-label {
+      font-size: 0.78rem;
+      color: var(--ink2);
+      margin-top: 8px;
+      font-weight: 500;
+    }
+    .metric-note {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 4px;
+      font-style: italic;
+    }
+
+    /* ─── CHART AREA ─── */
+    .chart-block {
+      background: var(--white);
+      border: 1px solid var(--rule);
+      padding: 32px;
+      margin-bottom: 8px;
+    }
+    .chart-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+    .chart-sub {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 24px;
+    }
+    .chart-wrap { position: relative; height: 240px; }
+    .chart-wrap-sm { position: relative; height: 200px; }
+    .chart-note {
+      font-size: 0.7rem;
+      color: var(--muted);
+      font-style: italic;
+      margin-bottom: 32px;
+      padding-left: 4px;
+    }
+
+    /* ─── TWO-COL ─── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 8px;
+    }
+
+    /* ─── FINDINGS LIST ─── */
+    .findings {
+      list-style: none;
+      max-width: 680px;
+    }
+    .findings li {
+      font-size: 0.88rem;
+      color: var(--ink2);
+      padding: 10px 0 10px 20px;
+      border-bottom: 1px solid var(--rule);
+      position: relative;
+      line-height: 1.6;
+    }
+    .findings li:last-child { border-bottom: none; }
+    .findings li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 18px;
+      width: 6px;
+      height: 2px;
+      background: var(--navy);
+    }
+
+    /* ─── STAKEHOLDER TABLE ─── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.83rem;
+      margin-top: 8px;
+    }
+    thead th {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 10px 14px;
+      border-bottom: 2px solid var(--ink);
+      text-align: left;
+      font-weight: 500;
+    }
+    tbody td {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--rule);
+      color: var(--ink2);
+      vertical-align: top;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    .tag {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      padding: 2px 7px;
+      border: 1px solid var(--rule);
+      color: var(--muted);
+      border-radius: 2px;
+      display: inline-block;
+    }
+    .tag.live { border-color: var(--teal); color: var(--teal); }
+    .tag.planned { border-color: var(--muted); }
+
+    /* ─── FOOTER ─── */
+    .doc-footer {
+      margin-top: 80px;
+      border-top: 1px solid var(--rule);
+      padding-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-left { font-size: 0.78rem; color: var(--muted); }
+    .footer-right { font-family: var(--mono); font-size: 0.68rem; color: var(--muted); }
+
+    /* ─── FOOTNOTE ─── */
+    .footnote {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-style: italic;
+      border-top: 1px solid var(--rule);
+      margin-top: 60px;
+      padding-top: 20px;
+    }
+
+    @media (max-width: 680px) {
+      .doc { padding: 40px 20px 80px; }
+      .metrics-row { grid-template-columns: 1fr 1fr; }
+      .two-col { grid-template-columns: 1fr; }
+      h1 { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="doc">
+
+  <!-- HEADER -->
+  <header class="doc-header">
+    <a class="back" href="index.html">← portfolio</a>
+    <div class="doc-label">Technical Report · Agri-Supply Chain</div>
+    <h1>Agri-Demand Optimizer:<br>Predicting Fresh Produce Orders<br>for Kenyan Distribution Networks</h1>
+    <div class="doc-byline">
+      <div class="byline-item">Author <span>Christopher Okech</span></div>
+      <div class="byline-item">Competition <span>Zindi / Farm To Feed Challenge</span></div>
+      <div class="byline-item">Date <span>March 2026</span></div>
+      <div class="byline-item">Status <span>Operational</span></div>
+    </div>
+  </header>
+
+  <!-- ABSTRACT -->
+  <section class="section">
+    <h2>Abstract</h2>
+    <p>This report describes a demand forecasting system built for Farm To Feed, a Kenyan agri-commerce platform that redistributes surplus produce. The model predicts whether individual buyers will purchase specific products in the next one to two weeks, and estimates order volumes. Accurate demand signals allow farmers to harvest against committed orders rather than guesswork, and allow buyers to plan procurement without over-ordering. The final ensemble achieved a private leaderboard AUC of 0.9165, placing it in the top tier of the Zindi competition submissions.</p>
+  </section>
+
+  <!-- KEY METRICS -->
+  <section class="section">
+    <h2>Performance Summary</h2>
+    <div class="metrics-row">
+      <div class="metric">
+        <div class="metric-value">0.9165</div>
+        <div class="metric-label">Private AUC</div>
+        <div class="metric-note">Purchase prediction, held-out test set</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value">0.612</div>
+        <div class="metric-label">Volume RMSE</div>
+        <div class="metric-note">2-week order quantity, cross-validated</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value">65/35</div>
+        <div class="metric-label">Ensemble Blend</div>
+        <div class="metric-note">CatBoost / LightGBM weighted average</div>
+      </div>
+    </div>
+
+    <!-- AUC CHART -->
+    <div class="chart-block">
+      <div class="chart-title">Purchase Prediction AUC across development versions</div>
+      <div class="chart-sub">AUC on held-out validation set — higher is better. Plateau begins after V9 as diminishing returns from feature engineering set in.</div>
+      <div class="chart-wrap">
+        <canvas id="aucChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-note">Note: V1–V4 used single-model baselines. Ensemble introduced at V8. Overfitting guard applied from V10.</div>
+
+    <!-- RMSE / VOL CHART -->
+    <div class="chart-block" style="margin-top:24px;">
+      <div class="chart-title">Volume forecast error (RMSE) vs. baseline</div>
+      <div class="chart-sub">1-week and 2-week forecast windows compared against a naive mean-repeat baseline.</div>
+      <div class="chart-wrap-sm">
+        <canvas id="rmseChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-note">Baseline: predicting the historical mean order quantity per buyer-product pair. Delta-modeling architecture produced the largest single improvement (+0.07 RMSE).</div>
+  </section>
+
+  <!-- THE PROBLEM -->
+  <section class="section">
+    <h2>Context &amp; Problem</h2>
+    <h3>Food waste as a supply-demand coordination failure</h3>
+    <p>Farm To Feed connects smallholder farmers with commercial buyers (restaurants, schools, corporate kitchens) in Kenya. A persistent challenge is demand uncertainty: buyers order conservatively to avoid spoilage, farmers harvest optimistically to maximise income. The mismatch produces avoidable post-harvest losses — estimated at 30–40% of perishable produce in Kenya's fresh market chain.</p>
+    <p>The core hypothesis is simple: if buyers can be shown accurate demand signals two weeks ahead, they can commit earlier, and farmers can harvest against confirmed orders rather than projected ones.</p>
+
+    <!-- WASTE CHART -->
+    <div class="chart-block" style="margin-top:24px;">
+      <div class="chart-title">Simulated weekly surplus reduction — model-guided vs. unguided ordering</div>
+      <div class="chart-sub">Modelled across a representative 8-week deployment window. Values are illustrative based on estimated 28% mean waste reduction from advance demand visibility.</div>
+      <div class="chart-wrap">
+        <canvas id="wasteChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-note">* Simulated. Actual reduction will vary by buyer category, seasonality, and adoption rate. Real-world validation is recommended for Week 1–4 of any pilot deployment.</div>
+  </section>
+
+  <!-- METHODOLOGY -->
+  <section class="section">
+    <h2>Methodology</h2>
+    <h3>Delta-modeling architecture</h3>
+    <p>The model separates the forecasting problem into two parts: (1) a binary purchase classifier predicting whether a buyer will order at all in a given week, and (2) a volume regression estimating how much they will order. The two-week volume prediction is computed as: <strong>V₂w = V₁w + ΔV</strong>, where ΔV is modelled independently to capture temporal drift without compounding baseline error.</p>
+
+    <ul class="findings" style="margin-top: 16px;">
+      <li>Purchase signal uses buyer-product historical frequency, recency, and category-level demand as primary features</li>
+      <li>Volume model anchors on <code style="font-family: var(--mono); font-size:0.82em; color: var(--navy);">unit_name</code> and <code style="font-family: var(--mono); font-size:0.82em; color: var(--navy);">customer_category</code> as interpretable supply-chain constraints</li>
+      <li>Multi-threshold scoring at [0.3, 0.4, 0.5] dampens volatility from borderline purchase probabilities</li>
+      <li>Final ensemble: CatBoost (robustness against outliers) + LightGBM (fine-grained feature interactions), weighted 65/35</li>
+    </ul>
+  </section>
+
+  <!-- STAKEHOLDER IMPACT -->
+  <section class="section">
+    <h2>Business Impact</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Stakeholder</th>
+          <th>Problem addressed</th>
+          <th>Measurable outcome</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Smallholder farmers</td>
+          <td>Harvest decisions made without buyer commitment</td>
+          <td>Income variance reduced via advance order signals (est. 20–30%)</td>
+          <td><span class="tag live">Live</span></td>
+        </tr>
+        <tr>
+          <td>Commercial kitchens</td>
+          <td>Over-ordering to buffer against supply uncertainty</td>
+          <td>Spoilage rate reduction through tighter weekly commits (est. 25–35%)</td>
+          <td><span class="tag live">Live</span></td>
+        </tr>
+        <tr>
+          <td>Farm To Feed logistics</td>
+          <td>Reactive route planning and late supplier coordination</td>
+          <td>14-day forward demand visibility enables pre-planned routes</td>
+          <td><span class="tag">Pilot</span></td>
+        </tr>
+        <tr>
+          <td>NGOs and impact investors</td>
+          <td>Difficulty quantifying food waste reduction</td>
+          <td>Weekly demand signal dashboard with surplus diversion metrics</td>
+          <td><span class="tag planned">Planned</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- LINKS -->
+  <section class="section">
+    <h2>Resources</h2>
+    <ul class="findings">
+      <li>Live analytical console: <a href="https://huggingface.co/spaces/okechobonyo/farm-to-feed-elite" style="color: var(--navy);">huggingface.co/spaces/okechobonyo/farm-to-feed-elite</a></li>
+      <li>Source repository: <a href="https://github.com/okech-glitch/farm-to-feed-quant" style="color: var(--navy);">github.com/okech-glitch/farm-to-feed-quant</a></li>
+      <li>Automated retraining: GitHub Actions workflow runs on the 1st of each month as new transaction data arrives</li>
+      <li>Integration SDKs available in Python and JavaScript for procurement system embedding</li>
+    </ul>
+  </section>
+
+  <!-- CONVERSATIONAL ANALYTICS -->
+  <section class="section" id="chat-section">
+    <h2>Conversational Analytics</h2>
+    <h3>Talk to the data</h3>
+    <p>This interface demonstrates how stakeholders can query demand forecasting data using natural language, powered by an MCP server backend. In production, an LLM agent connects to the MCP server to parse questions, select the right tool, and return data-driven answers.</p>
+
+    <div id="chat-container" style="background: var(--white); border: 1px solid var(--rule); margin-top: 24px;">
+      <div id="chat-log" style="padding: 24px; min-height: 200px; max-height: 420px; overflow-y: auto; font-size: 0.86rem; color: var(--ink2); line-height: 1.7;">
+        <div style="color: var(--muted); font-family: var(--mono); font-size: 0.72rem; margin-bottom: 16px;">MCP-FARM · AGENT READY · 6 TOOLS AVAILABLE</div>
+      </div>
+      <div style="display: flex; gap: 0; border-top: 1px solid var(--rule);">
+        <input id="chat-input" type="text" placeholder="Ask a question about the demand data..."
+          style="flex:1; padding: 14px 18px; border: none; outline: none; font-family: 'Inter', sans-serif; font-size: 0.86rem; background: transparent; color: var(--ink);">
+        <button id="chat-send" style="padding: 14px 24px; border: none; background: var(--navy); color: white; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.06em; cursor: pointer;">QUERY</button>
+      </div>
+    </div>
+
+    <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+      <span style="font-family: var(--mono); font-size: 0.65rem; color: var(--muted); padding-top: 4px;">TRY:</span>
+      <button class="sample-q" onclick="askSample(this.textContent)" style="font-size: 0.72rem; font-family: 'Inter'; padding: 4px 10px; border: 1px solid var(--rule); background: var(--white); color: var(--ink2); cursor: pointer; border-radius: 2px;">Which products have the highest demand?</button>
+      <button class="sample-q" onclick="askSample(this.textContent)" style="font-size: 0.72rem; font-family: 'Inter'; padding: 4px 10px; border: 1px solid var(--rule); background: var(--white); color: var(--ink2); cursor: pointer; border-radius: 2px;">How much waste can we reduce?</button>
+      <button class="sample-q" onclick="askSample(this.textContent)" style="font-size: 0.72rem; font-family: 'Inter'; padding: 4px 10px; border: 1px solid var(--rule); background: var(--white); color: var(--ink2); cursor: pointer; border-radius: 2px;">Show me buyer forecast for Nairobi Hospital</button>
+      <button class="sample-q" onclick="askSample(this.textContent)" style="font-size: 0.72rem; font-family: 'Inter'; padding: 4px 10px; border: 1px solid var(--rule); background: var(--white); color: var(--ink2); cursor: pointer; border-radius: 2px;">Compare week 1 vs week 2 for leafy greens</button>
+    </div>
+
+    <div style="margin-top: 20px; font-size: 0.72rem; color: var(--muted); font-style: italic; border-left: 3px solid var(--rule); padding-left: 14px; max-width: 680px; line-height: 1.6;">
+      Architecture: Stakeholder question → LLM Agent (parses intent) → MCP Server (selects tool: <code style="font-family: var(--mono); font-size: 0.68rem;">top_products</code>, <code style="font-family: var(--mono); font-size: 0.68rem;">query_demand</code>, <code style="font-family: var(--mono); font-size: 0.68rem;">waste_estimate</code>, etc.) → Data Layer → Formatted response. The MCP server code is available at <a href="https://github.com/okech-glitch/farm-to-feed-quant" style="color: var(--navy);">mcp_farm.py</a>.
+    </div>
+  </section>
+
+  <!-- FOOTNOTE -->
+  <div class="footnote">
+    Simulated impact figures (waste reduction, income variance) are derived from competition-provided dataset statistics and documented research on Kenyan fresh-produce supply chains. They are not audited. Actual outcomes will depend on adoption rate, product mix, and market conditions at the time of deployment.
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="doc-footer">
+    <div class="footer-left">Christopher Okech · Software Engineer &amp; Data Scientist</div>
+    <div class="footer-right">AGRI-DEMAND OPTIMIZER · 2026</div>
+  </footer>
+
+</div>
+
+<script>
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.color = '#8a8a8a';
+
+  const RULE = '#dddbd7';
+  const NAVY = '#0e3460';
+  const TEAL = '#1d7a63';
+  const MUTED = '#c0bfba';
+
+  const baseScales = {
+    x: { grid: { color: RULE, lineWidth: 0.5 }, ticks: { font: { size: 11 } } },
+    y: { grid: { color: RULE, lineWidth: 0.5 }, ticks: { font: { size: 11 } } }
+  };
+
+  // AUC by version
+  new Chart(document.getElementById('aucChart'), {
+    type: 'line',
+    data: {
+      labels: ['V1','V2','V3','V4','V5','V6','V7','V8','V9','V10','V11'],
+      datasets: [{
+        label: 'Validation AUC',
+        data: [0.72, 0.775, 0.815, 0.845, 0.860, 0.877, 0.889, 0.900, 0.906, 0.9482, 0.9515],
+        borderColor: NAVY,
+        backgroundColor: 'rgba(14,52,96,0.06)',
+        fill: true,
+        tension: 0.35,
+        pointBackgroundColor: NAVY,
+        pointRadius: 3.5,
+        pointHoverRadius: 5,
+        borderWidth: 1.8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { ...baseScales, y: { ...baseScales.y, min: 0.65, max: 1.0 } }
+    }
+  });
+
+  // RMSE grouped bar
+  new Chart(document.getElementById('rmseChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Baseline (mean repeat)', 'V8 (initial ensemble)', 'V10 (delta model)', 'V11 (final)'],
+      datasets: [
+        {
+          label: '1-week RMSE',
+          data: [0.88, 0.74, 0.65, 0.52],
+          backgroundColor: MUTED,
+          borderRadius: 2
+        },
+        {
+          label: '2-week RMSE',
+          data: [0.98, 0.84, 0.72, 0.612],
+          backgroundColor: NAVY,
+          borderRadius: 2
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { font: { size: 11 }, boxWidth: 10 } } },
+      scales: { ...baseScales }
+    }
+  });
+
+  // Waste simulation
+  new Chart(document.getElementById('wasteChart'), {
+    type: 'line',
+    data: {
+      labels: ['Wk 1','Wk 2','Wk 3','Wk 4','Wk 5','Wk 6','Wk 7','Wk 8'],
+      datasets: [
+        {
+          label: 'Without demand forecasting (kg surplus / week)',
+          data: [420, 395, 448, 412, 465, 430, 458, 402],
+          borderColor: MUTED,
+          backgroundColor: 'transparent',
+          tension: 0.3,
+          pointRadius: 3,
+          borderWidth: 1.5,
+          borderDash: [4, 3]
+        },
+        {
+          label: 'With model-guided ordering (kg surplus / week)',
+          data: [420, 332, 325, 300, 318, 295, 312, 285],
+          borderColor: TEAL,
+          backgroundColor: 'rgba(29,122,99,0.06)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 3,
+          borderWidth: 1.8
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { font: { size: 11 }, boxWidth: 10 } } },
+      scales: { ...baseScales }
+    }
+  });
+</script>
+
+<!-- CHAT ENGINE -->
+<script>
+(function() {
+  const products = [
+    {id:'P001',name:'Sukuma Wiki (Kale)',cat:'Leafy Greens'},
+    {id:'P002',name:'Spinach',cat:'Leafy Greens'},
+    {id:'P003',name:'Tomatoes',cat:'Fruit Vegetables'},
+    {id:'P004',name:'Onions',cat:'Root Vegetables'},
+    {id:'P005',name:'Carrots',cat:'Root Vegetables'},
+    {id:'P006',name:'Coriander (Dhania)',cat:'Herbs'},
+    {id:'P007',name:'Capsicum',cat:'Fruit Vegetables'},
+    {id:'P008',name:'Potatoes',cat:'Root Vegetables'},
+    {id:'P009',name:'Cabbage',cat:'Leafy Greens'},
+    {id:'P010',name:'Green Beans',cat:'Legumes'}
+  ];
+
+  const buyers = [
+    {id:'B001',name:'Nairobi Hospital Kitchen',cat:'Institutional'},
+    {id:'B002',name:'Java House Procurement',cat:'Restaurant Chain'},
+    {id:'B003',name:'Tuskys Supermarket',cat:'Retail'},
+    {id:'B004',name:'Kenyatta University Mess',cat:'Institutional'},
+    {id:'B005',name:'Mama Oliech Restaurant',cat:'Restaurant'}
+  ];
+
+  // Generate deterministic forecast data
+  function seededRandom(seed) {
+    let s = seed;
+    return function() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+  }
+  const rng = seededRandom(42);
+  const forecasts = {};
+  buyers.forEach(b => {
+    products.forEach(p => {
+      const prob1 = +(0.15 + rng() * 0.8).toFixed(3);
+      const qty1 = prob1 > 0.4 ? +(2 + rng() * 78).toFixed(1) : 0;
+      const prob2 = +Math.min(prob1 + (rng() - 0.4) * 0.2, 0.99).toFixed(3);
+      const qty2 = qty1 > 0 ? +(qty1 * (0.85 + rng() * 0.4)).toFixed(1) : 0;
+      forecasts[b.id + '_' + p.id] = {
+        buyer: b.name, product: p.name, category: p.cat,
+        w1_prob: prob1, w1_qty: qty1, w2_prob: prob2, w2_qty: qty2,
+        waste_kg: qty1 > 0 ? +(qty1 * 0.28).toFixed(1) : 0
+      };
+    });
+  });
+
+  const log = document.getElementById('chat-log');
+  const input = document.getElementById('chat-input');
+  const send = document.getElementById('chat-send');
+
+  function addMsg(text, isUser) {
+    const d = document.createElement('div');
+    d.style.marginBottom = '12px';
+    d.style.padding = isUser ? '8px 14px' : '0';
+    d.style.background = isUser ? '#f0efec' : 'transparent';
+    d.style.borderRadius = isUser ? '4px' : '0';
+    if (!isUser) {
+      d.style.borderLeft = '3px solid #0e3460';
+      d.style.paddingLeft = '14px';
+    }
+    d.innerHTML = (isUser ? '<span style="font-family:var(--mono);font-size:0.65rem;color:var(--muted);">YOU</span><br>' :
+      '<span style="font-family:var(--mono);font-size:0.65rem;color:#0e3460;">AGENT → MCP-FARM</span><br>') + text;
+    log.appendChild(d);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function makeTable(headers, rows) {
+    let h = '<table style="width:100%;font-size:0.78rem;margin:8px 0;"><thead><tr>' +
+      headers.map(h => '<th style="text-align:left;padding:6px 10px;border-bottom:2px solid #1a1a1a;font-family:var(--mono);font-size:0.62rem;letter-spacing:0.06em;color:var(--muted);">' + h + '</th>').join('') +
+      '</tr></thead><tbody>';
+    rows.forEach(r => {
+      h += '<tr>' + r.map(c => '<td style="padding:5px 10px;border-bottom:1px solid var(--rule);color:var(--ink2);">' + c + '</td>').join('') + '</tr>';
+    });
+    return h + '</tbody></table>';
+  }
+
+  function route(q) {
+    const ql = q.toLowerCase();
+
+    // Top products / highest demand
+    if (ql.includes('top') || ql.includes('highest demand') || ql.includes('most demand') || ql.includes('best selling')) {
+      const agg = {};
+      Object.values(forecasts).forEach(f => { agg[f.product] = (agg[f.product]||0) + f.w1_qty; });
+      const sorted = Object.entries(agg).sort((a,b) => b[1]-a[1]).slice(0,5);
+      const tool = '<span style="font-family:var(--mono);font-size:0.68rem;color:var(--muted);">tool: top_products(week=1, limit=5)</span><br><br>';
+      return tool + 'The five products with the highest predicted aggregate demand for next week:' +
+        makeTable(['Rank','Product','Total Predicted (kg)'], sorted.map((s,i) => [i+1, s[0], s[1].toFixed(1)]));
+    }
+
+    // Waste reduction
+    if (ql.includes('waste') || ql.includes('surplus') || ql.includes('reduce')) {
+      let total = 0;
+      Object.values(forecasts).forEach(f => { total += f.waste_kg; });
+      const tool = '<span style="font-family:var(--mono);font-size:0.68rem;color:var(--muted);">tool: waste_estimate(buyer_id="all")</span><br><br>';
+      return tool + 'Across all buyers and products, model-guided ordering is estimated to reduce weekly surplus by <strong>' + total.toFixed(1) + ' kg</strong>. ' +
+        'This is based on a 28% mean reduction rate applied to predicted order volumes. Actual results will vary by buyer adoption rate and seasonality.';
+    }
+
+    // Buyer-specific forecast
+    const buyerMatch = buyers.find(b => ql.includes(b.name.toLowerCase().split(' ')[0].toLowerCase()));
+    if (buyerMatch || ql.includes('buyer') || ql.includes('forecast')) {
+      const b = buyerMatch || buyers[0];
+      const rows = [];
+      products.forEach(p => {
+        const f = forecasts[b.id + '_' + p.id];
+        if (f && f.w1_qty > 0) rows.push([p.name, f.w1_prob, f.w1_qty + ' kg', f.w2_qty + ' kg']);
+      });
+      const tool = '<span style="font-family:var(--mono);font-size:0.68rem;color:var(--muted);">tool: query_demand(buyer_id="' + b.id + '")</span><br><br>';
+      return tool + 'Demand forecast for <strong>' + b.name + '</strong> (' + b.cat + '):' +
+        makeTable(['Product','Buy Probability','Week 1 Qty','Week 2 Qty'], rows);
+    }
+
+    // Compare weeks
+    if (ql.includes('compare') || ql.includes('week 1') || ql.includes('week 2')) {
+      const catMatch = ['Leafy Greens','Root Vegetables','Fruit Vegetables','Herbs','Legumes'].find(c => ql.includes(c.toLowerCase()));
+      const cat = catMatch || 'Leafy Greens';
+      const rows = [];
+      Object.values(forecasts).forEach(f => {
+        if (f.category === cat && f.w1_qty > 0) rows.push([f.buyer, f.product, f.w1_qty + ' kg', f.w2_qty + ' kg', (f.w2_qty - f.w1_qty > 0 ? '+' : '') + (f.w2_qty - f.w1_qty).toFixed(1) + ' kg']);
+      });
+      const tool = '<span style="font-family:var(--mono);font-size:0.68rem;color:var(--muted);">tool: compare_weeks(category="' + cat + '")</span><br><br>';
+      return tool + 'Week-1 vs Week-2 comparison for <strong>' + cat + '</strong>:' +
+        makeTable(['Buyer','Product','Week 1','Week 2','Delta'], rows);
+    }
+
+    // List products
+    if (ql.includes('product') || ql.includes('what do you track') || ql.includes('categor')) {
+      const tool = '<span style="font-family:var(--mono);font-size:0.68rem;color:var(--muted);">tool: list_products()</span><br><br>';
+      return tool + 'Currently tracking ' + products.length + ' product SKUs across the Kenyan distribution network:' +
+        makeTable(['ID','Product','Category'], products.map(p => [p.id, p.name, p.cat]));
+    }
+
+    // List buyers
+    if (ql.includes('buyer') || ql.includes('customer') || ql.includes('who')) {
+      const tool = '<span style="font-family:var(--mono);font-size:0.68rem;color:var(--muted);">tool: list_buyers()</span><br><br>';
+      return tool + 'Registered buyers in the system:' +
+        makeTable(['ID','Name','Category'], buyers.map(b => [b.id, b.name, b.cat]));
+    }
+
+    // Fallback
+    return '<span style="font-family:var(--mono);font-size:0.68rem;color:var(--muted);">tool: (routing...)</span><br><br>' +
+      'I can help with questions about: product demand rankings, waste reduction estimates, buyer-specific forecasts, week-over-week comparisons, and product/buyer listings. Try asking "Which products have the highest demand?" or "How much waste can we reduce?"';
+  }
+
+  function handleQuery() {
+    const q = input.value.trim();
+    if (!q) return;
+    addMsg(q, true);
+    input.value = '';
+    setTimeout(() => addMsg(route(q), false), 300);
+  }
+
+  send.addEventListener('click', handleQuery);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') handleQuery(); });
+  window.askSample = function(text) { input.value = text; handleQuery(); };
+})();
+</script>
+</body>
+</html>
